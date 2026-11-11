@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: url_shortener_db
+    environment:
+      POSTGRES_USER: urlshortener
+      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_DB: urls
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U urlshortener"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - url_shortener_network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: url_shortener_redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - url_shortener_network
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: url_shortener_api
+    environment:
+      DATABASE_URL: postgresql://urlshortener:secretpassword@db:5432/urls
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    restart: unless-stopped
+    networks:
+      - url_shortener_network
+
+volumes:
+  postgres_data:
+
+networks:
+  url_shortener_network:
+    driver: bridge

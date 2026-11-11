@@ -1,0 +1,23 @@
+# local config
+.env
+backend/.env
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+
+# environments
+venv/
+.venv/
+env/
+
+# local databases
+*.db
+*.sqlite
+*.log
+
+# editors and OS files
+.vscode/
+.idea/
+.DS_Store
